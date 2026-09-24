@@ -33,6 +33,7 @@
   .card h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 12px;}
   .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
   .card-head h2{margin:0;}
+  .hidden{display:none;}
   .head-actions{display:flex; gap:8px;}
   .gear{background:none; border:1px solid var(--line); color:var(--gold); border-radius:10px; width:44px; height:38px; font-size:1.15rem; font-weight:700; line-height:1; cursor:pointer;}
   .gear:active{background:rgba(201,162,39,.16);}
@@ -131,6 +132,7 @@
       <h2>Персонаж</h2>
       <div class="head-actions">
         <button class="gear" id="helpBtn" type="button" aria-label="Справка" title="Справка">?</button>
+        <button class="gear" id="installBtn" type="button" aria-label="Установить приложение" title="Установить приложение">⤓</button>
         <button class="gear" id="gear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
       </div>
     </div>
@@ -631,6 +633,34 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
 
   renderList();
   renderSummary();
+
+  var installBtn = el("installBtn");
+  var deferredPrompt = null;
+
+  if(installBtn){
+    if((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true){
+      installBtn.classList.add("hidden");
+    }
+    window.addEventListener("beforeinstallprompt", function(e){
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+    window.addEventListener("appinstalled", function(){
+      deferredPrompt = null;
+      installBtn.classList.add("hidden");
+    });
+    installBtn.addEventListener("click", function(){
+      if(deferredPrompt){
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(){
+          deferredPrompt = null;
+          installBtn.classList.add("hidden");
+        });
+      } else {
+        alert("Установка приложения:\n\n\u2022 Android (Chrome): меню \u22ee \u2192 «Установить приложение» или «Добавить на главный экран».\n\u2022 iPhone (Safari): «Поделиться» \u2192 «На экран «Домой»».\n\u2022 Windows/ПК: значок установки в адресной строке браузера.");
+      }
+    });
+  }
 
   if("serviceWorker" in navigator){
     window.addEventListener("load", function(){
