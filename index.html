@@ -28,6 +28,10 @@
 
   .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
   .card h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 12px;}
+  .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .card-head h2{margin:0;}
+  .gear{background:none; border:1px solid var(--line); color:var(--gold); border-radius:10px; width:44px; height:38px; font-size:1.15rem; line-height:1; cursor:pointer;}
+  .gear:active{background:rgba(201,162,39,.16);}
   .hint{font-size:.78rem; color:var(--muted); margin:-4px 0 12px;}
 
   .field{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
@@ -68,6 +72,19 @@
   .qbtn:first-child{border-radius:10px 0 0 10px;}
   .qbtn:last-child{border-radius:0 10px 10px 0;}
   .qbtn:active{background:rgba(201,162,39,.16);}
+  .pin{flex:0 0 auto; height:42px; padding:0 9px; background:var(--panel); border:1px solid var(--line); color:var(--muted); border-radius:10px; font-size:.78rem; cursor:pointer;}
+  .pin.on{color:var(--gold); border-color:var(--gold);}
+  .pin:active{background:rgba(201,162,39,.16);}
+
+  .resources.has-items{position:sticky; top:8px; z-index:20; box-shadow:0 10px 22px rgba(0,0,0,.45);}
+  .resources .empty{padding:8px 4px;}
+  .res-item{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line);}
+  .res-item:last-child{border-bottom:none;}
+  .res-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.92rem;}
+  .res-item .qty-ctrl .mini{width:48px;}
+  .res-item .qbtn{width:38px;}
+  .res-unpin{flex:0 0 auto; height:38px; padding:0 9px; background:none; border:1px solid var(--line); color:var(--muted); border-radius:9px; font-size:.76rem; cursor:pointer;}
+  .res-unpin:active{background:rgba(201,162,39,.16);}
   .del{background:none; border:1px solid var(--line); color:var(--over); border-radius:10px; width:42px; height:42px; font-size:1.1rem; cursor:pointer; flex:0 0 auto;}
   .del:active{background:rgba(192,57,43,.15);}
 
@@ -87,7 +104,7 @@
 
   .modal{position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:flex-end; justify-content:center; z-index:100; padding:14px;}
   .modal.hidden{display:none;}
-  .modal-box{background:var(--panel); border:1px solid var(--gold); border-radius:16px; padding:18px; width:100%; max-width:520px; margin-bottom:env(safe-area-inset-bottom);}
+  .modal-box{background:var(--panel); border:1px solid var(--gold); border-radius:16px; padding:18px; width:100%; max-width:520px; margin-bottom:env(safe-area-inset-bottom); max-height:90vh; overflow-y:auto;}
   .modal-box h3{margin:0 0 8px; color:var(--gold); font-size:1.05rem;}
   .modal-box p{margin:0 0 16px; color:var(--muted); font-size:.9rem;}
   .modal-box .btn{margin-bottom:8px;}
@@ -103,9 +120,44 @@
   <h1>Грузоподъёмность<small>Dungeons &amp; Dragons 5e</small></h1>
 
   <div class="card">
-    <h2>Персонаж</h2>
+    <div class="card-head">
+      <h2>Персонаж</h2>
+      <button class="gear" id="gear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
+    </div>
     <div class="field"><label>Имя</label><input type="text" id="name" placeholder="Безымянный"></div>
+  </div>
+
+  <div class="card summary">
+    <h2>Состояние</h2>
+    <div class="big"><span class="carried" id="carried">0</span><span class="of" id="unitOf">из 0 фнт</span></div>
+    <div id="status" class="status">Норма</div>
+    <div class="bar"><span id="fill"></span><i class="tick" id="tick1"></i></div>
+    <div class="rows">
+      <div class="r"><span>Без штрафов до</span><span id="t1">—</span></div>
+      <div class="r"><span>Максимум (толкать / тянуть / поднимать)</span><span id="t3">—</span></div>
+      <div class="r"><span>Свободно до штрафа</span><span id="free">—</span></div>
+    </div>
+  </div>
+
+  <div class="card resources" id="resources">
+    <h2>Ресурсы</h2>
+    <div id="resList"></div>
+  </div>
+
+  <div class="card">
+    <h2>Инвентарь</h2>
+    <p class="hint">Начните печатать название — появится подсказка с весом. Свой предмет можно вписать вручную.</p>
+    <div id="list"></div>
+    <button class="btn ghost" id="add">+ Добавить предмет</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="settings">
+  <div class="modal-box">
+    <h3>Настройки</h3>
     <div class="field"><label>Сила</label><input type="number" id="str" min="0" max="30" step="1" value="10"></div>
+    <div class="field"><label>Грузопод. ×</label><input type="number" id="capMult" min="0" step="1" value="15"></div>
+    <div class="field"><label>Максимум ×</label><input type="number" id="maxMult" min="0" step="1" value="30"></div>
     <div class="field"><label>Размер</label>
       <select id="size">
         <option value="0.5">Крошечный (×½)</option>
@@ -122,27 +174,7 @@
         <option value="кг">Килограммы (кг)</option>
       </select>
     </div>
-  </div>
-
-  <div class="card summary">
-    <h2>Состояние</h2>
-    <div class="big"><span class="carried" id="carried">0</span><span class="of" id="unitOf">из 0 фнт</span></div>
-    <div id="status" class="status">Норма</div>
-    <div class="bar"><span id="fill"></span><i class="tick" id="tick1"></i><i class="tick" id="tick2"></i></div>
-    <div class="rows">
-      <div class="r"><span>Без штрафов до</span><span id="t1">—</span></div>
-      <div class="r"><span>Тяжёлая нагрузка до</span><span id="t2">—</span></div>
-      <div class="r"><span>Макс. грузоподъёмность</span><span id="t3">—</span></div>
-      <div class="r"><span>Свободно</span><span id="free">—</span></div>
-      <div class="r"><span>Толкать / тянуть / поднимать</span><span id="push">—</span></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Инвентарь</h2>
-    <p class="hint">Начните печатать название — появится подсказка с весом. Свой предмет можно вписать вручную.</p>
-    <div id="list"></div>
-    <button class="btn ghost" id="add">+ Добавить предмет</button>
+    <button class="btn" id="settingsClose" type="button">Готово</button>
   </div>
 </div>
 
@@ -166,7 +198,7 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
 
   var KEY = "dnd5e_carry_v1";
   var LB_TO_KG = 0.45359237;
-  var state = { name:"", str:10, size:1, powerful:false, unit:"фнт", items:[] };
+  var state = { name:"", str:10, capMult:15, maxMult:30, size:1, powerful:false, unit:"фнт", items:[] };
 
   function uid(){ return Math.random().toString(36).slice(2,9); }
 
@@ -201,22 +233,20 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
 
   function totals(){
     var str = Number(state.str) || 0;
+    var cm = Number(state.capMult); if(isNaN(cm)) cm = 0;
+    var mm = Number(state.maxMult); if(isNaN(mm)) mm = 0;
     var m = mult();
-    var t1 = str*5*m, t2 = str*10*m, max = str*15*m, push = str*30*m;
+    var capacity = str*cm*m, max = str*mm*m;
     var carried = state.items.reduce(function(s,it){
       var w = Number(it.weight) || 0, q = Number(it.qty) || 0;
       return s + w*q;
     }, 0);
-    return { t1:t1, t2:t2, max:max, push:push, carried:carried };
+    return { capacity:capacity, max:max, carried:carried };
   }
 
   function statusOf(carried, T){
-    if(carried > T.max)  return { label:"Превышен предел", color:"var(--over)",
-      note:"Нести невозможно." };
-    if(carried > T.t2)   return { label:"Тяжёлая нагрузка", color:"var(--heavy)",
-      note:"Скорость −20 фт; помеха на проверки, атаки и спасброски по Силе, Ловкости и Телосложению." };
-    if(carried > T.t1)   return { label:"Нагрузка", color:"var(--warn)",
-      note:"Скорость −10 фт." };
+    if(carried > T.max)      return { label:"Превышен предел", color:"var(--over)", note:"" };
+    if(carried > T.capacity) return { label:"Перегруз", color:"var(--warn)", note:"" };
     return { label:"Норма", color:"var(--ok)", note:"" };
   }
 
@@ -243,12 +273,95 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
       return { id:uid(), name:c.n, weight:(c.w === null || c.w === undefined ? null : c.w), qty:String(c.q) };
     });
     if(repl.length === 0) return;
-    it.name = repl[0].name; it.weight = repl[0].weight; it.qty = repl[0].qty;
+    it.name = repl[0].name; it.weight = repl[0].weight; it.qty = repl[0].qty; it.pinned = false;
     var rest = repl.slice(1);
     if(rest.length){
       Array.prototype.splice.apply(state.items, [idx + 1, 0].concat(rest));
     }
     save(); renderList(); renderSummary();
+  }
+
+  function itemById(id){
+    for(var i=0;i<state.items.length;i++){ if(state.items[i].id === id) return state.items[i]; }
+    return null;
+  }
+
+  function updateLines(it){
+    var v = (Number(it.weight)||0) * (Number(it.qty)||0) * uFactor();
+    var ls = document.querySelectorAll('[data-line="' + it.id + '"]');
+    for(var j=0;j<ls.length;j++){ ls[j].textContent = fmt(v) + " " + state.unit; }
+  }
+
+  function syncQty(it, source){
+    var qs = document.querySelectorAll('[data-qty="' + it.id + '"]');
+    for(var i=0;i<qs.length;i++){
+      if(qs[i] !== source && qs[i].value !== String(it.qty)) qs[i].value = it.qty;
+    }
+    updateLines(it);
+    renderSummary();
+  }
+
+  function bumpQty(it, d){
+    var cur = Number(it.qty); if(isNaN(cur)) cur = 0;
+    it.qty = String(Math.max(0, cur + d));
+    save(); syncQty(it, null);
+  }
+
+  function paintPinButton(id){
+    var b = document.querySelector('[data-pin="' + id + '"]');
+    if(!b) return;
+    var it = itemById(id);
+    var on = !!(it && it.pinned);
+    b.textContent = on ? "Открепить" : "Закрепить";
+    if(on) b.classList.add("on"); else b.classList.remove("on");
+  }
+
+  function togglePin(it){
+    it.pinned = !it.pinned;
+    save(); paintPinButton(it.id); renderResources();
+  }
+
+  function resourceCard(it){
+    var row = document.createElement("div");
+    row.className = "res-item";
+    var nm = document.createElement("span");
+    nm.className = "res-name";
+    nm.textContent = it.name || "Без названия";
+    var ctrl = document.createElement("div");
+    ctrl.className = "qty-ctrl";
+    var minus = document.createElement("button");
+    minus.type = "button"; minus.className = "qbtn"; minus.textContent = "−"; minus.setAttribute("aria-label","Меньше");
+    minus.addEventListener("click", function(){ bumpQty(it, -1); });
+    var inp = document.createElement("input");
+    inp.type = "number"; inp.className = "mini"; inp.min = "0"; inp.step = "1"; inp.inputMode = "numeric";
+    inp.setAttribute("data-qty", it.id);
+    inp.value = (it.qty === null || it.qty === undefined || it.qty === "") ? "1" : it.qty;
+    inp.addEventListener("input", function(){ it.qty = inp.value; save(); syncQty(it, inp); });
+    var plus = document.createElement("button");
+    plus.type = "button"; plus.className = "qbtn"; plus.textContent = "+"; plus.setAttribute("aria-label","Больше");
+    plus.addEventListener("click", function(){ bumpQty(it, 1); });
+    ctrl.appendChild(minus); ctrl.appendChild(inp); ctrl.appendChild(plus);
+    var unpin = document.createElement("button");
+    unpin.type = "button"; unpin.className = "res-unpin"; unpin.textContent = "Открепить";
+    unpin.addEventListener("click", function(){ togglePin(it); });
+    row.appendChild(nm); row.appendChild(ctrl); row.appendChild(unpin);
+    return row;
+  }
+
+  function renderResources(){
+    var box = el("resList");
+    box.innerHTML = "";
+    var pinned = state.items.filter(function(x){ return !!x.pinned; });
+    var card = el("resources");
+    if(pinned.length === 0){
+      if(card) card.classList.remove("has-items");
+      var e = document.createElement("div");
+      e.className = "empty"; e.textContent = "Закрепите предметы кнопкой «Закрепить» — они появятся здесь.";
+      box.appendChild(e);
+      return;
+    }
+    if(card) card.classList.add("has-items");
+    pinned.forEach(function(it){ box.appendChild(resourceCard(it)); });
   }
 
   function renderSummary(){
@@ -270,15 +383,12 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
     fill.style.background = st.color;
 
     var mk = function(v){ return T.max > 0 ? Math.min(100, v / T.max * 100) : 0; };
-    el("tick1").style.left = mk(T.t1) + "%";
-    el("tick2").style.left = mk(T.t2) + "%";
+    el("tick1").style.left = mk(T.capacity) + "%";
 
-    el("t1").textContent   = fmt(T.t1 * f) + " " + state.unit;
-    el("t2").textContent   = fmt(T.t2 * f) + " " + state.unit;
-    el("t3").textContent   = fmt(T.max * f) + " " + state.unit;
-    el("push").textContent = fmt(T.push * f) + " " + state.unit;
+    el("t1").textContent = fmt(T.capacity * f) + " " + state.unit;
+    el("t3").textContent = fmt(T.max * f) + " " + state.unit;
 
-    var free = (T.max - T.carried) * f;
+    var free = (T.capacity - T.carried) * f;
     var node = el("free");
     node.textContent = (free >= 0 ? fmt(free) : "−" + fmt(-free)) + " " + state.unit;
     node.style.color = free >= 0 ? "var(--text)" : "var(--over)";
@@ -324,7 +434,13 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
       state.items = state.items.filter(function(x){ return x.id !== it.id; });
       save(); renderList(); renderSummary();
     });
-    top.appendChild(ac); top.appendChild(del);
+    var pin = document.createElement("button");
+    pin.type = "button"; pin.className = "pin";
+    pin.setAttribute("data-pin", it.id);
+    pin.textContent = it.pinned ? "Открепить" : "Закрепить";
+    if(it.pinned) pin.classList.add("on");
+    pin.addEventListener("click", function(){ togglePin(it); });
+    top.appendChild(ac); top.appendChild(pin); top.appendChild(del);
 
     var bottom = document.createElement("div");
     bottom.className = "bottom";
@@ -338,15 +454,12 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
     weight.addEventListener("input", function(){
       var v = weight.value.trim();
       it.weight = (v === "") ? null : (Number(v) / uFactor());
-      save(); renderSummary(); updateLine();
+      save(); renderSummary(); updateLines(it);
     });
     var line = document.createElement("span");
     line.className = "line";
-    function updateLine(){
-      var v = (Number(it.weight) || 0) * (Number(it.qty) || 0) * uFactor();
-      line.textContent = fmt(v) + " " + state.unit;
-    }
-    updateLine();
+    line.setAttribute("data-line", it.id);
+    line.textContent = fmt((Number(it.weight) || 0) * (Number(it.qty) || 0) * uFactor()) + " " + state.unit;
     rowW.appendChild(wlbl); rowW.appendChild(weight); rowW.appendChild(line);
 
     var rowQ = document.createElement("div"); rowQ.className = "brow";
@@ -355,24 +468,19 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
     var minus = document.createElement("button");
     minus.type = "button"; minus.className = "qbtn"; minus.textContent = "−";
     minus.setAttribute("aria-label","Меньше");
-    minus.addEventListener("click", function(){ bumpQty(-1); });
+    minus.addEventListener("click", function(){ bumpQty(it, -1); });
     var qty = document.createElement("input");
     qty.type = "number"; qty.className = "mini"; qty.min = "0"; qty.step = "1";
     qty.inputMode = "numeric"; qty.placeholder = "1";
+    qty.setAttribute("data-qty", it.id);
     qty.value = (it.qty === null || it.qty === undefined || it.qty === "") ? "1" : it.qty;
     qty.addEventListener("input", function(){
-      it.qty = qty.value; save(); renderSummary(); updateLine();
+      it.qty = qty.value; save(); syncQty(it, qty);
     });
     var plus = document.createElement("button");
     plus.type = "button"; plus.className = "qbtn"; plus.textContent = "+";
     plus.setAttribute("aria-label","Больше");
-    plus.addEventListener("click", function(){ bumpQty(1); });
-    function bumpQty(d){
-      var cur = Number(qty.value); if(isNaN(cur)) cur = 0;
-      cur = Math.max(0, cur + d);
-      qty.value = String(cur);
-      it.qty = qty.value; save(); renderSummary(); updateLine();
-    }
+    plus.addEventListener("click", function(){ bumpQty(it, 1); });
     qctrl.appendChild(minus); qctrl.appendChild(qty); qctrl.appendChild(plus);
     rowQ.appendChild(qlbl); rowQ.appendChild(qctrl);
 
@@ -381,7 +489,7 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
       if(eq.w !== null && eq.w !== undefined){
         it.weight = eq.w;
         weight.value = fmt(eq.w * uFactor());
-        updateLine();
+        updateLines(it);
       }
       save(); renderSummary();
     }
@@ -449,9 +557,11 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
     if(state.items.length === 0){
       var e = document.createElement("div");
       e.className = "empty"; e.textContent = "Инвентарь пуст. Добавьте первый предмет.";
-      box.appendChild(e); return;
+      box.appendChild(e);
+    } else {
+      state.items.forEach(function(it){ box.appendChild(itemRow(it)); });
     }
-    state.items.forEach(function(it){ box.appendChild(itemRow(it)); });
+    renderResources();
   }
 
   function addItem(){
@@ -467,6 +577,10 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
   el("name").addEventListener("input", function(){ state.name = el("name").value; save(); });
   el("str").value = state.str;
   el("str").addEventListener("input", function(){ state.str = el("str").value; save(); renderSummary(); });
+  el("capMult").value = state.capMult;
+  el("capMult").addEventListener("input", function(){ state.capMult = el("capMult").value; save(); renderSummary(); });
+  el("maxMult").value = state.maxMult;
+  el("maxMult").addEventListener("input", function(){ state.maxMult = el("maxMult").value; save(); renderSummary(); });
   el("size").value = String(state.size);
   el("size").addEventListener("change", function(){ state.size = Number(el("size").value); save(); renderSummary(); });
   el("powerful").checked = !!state.powerful;
@@ -481,6 +595,10 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
   el("mSingle").addEventListener("click", function(){ var h = packHandlers.single; closeModal(); if(h) h(); });
   el("mCancel").addEventListener("click", closeModal);
   el("modal").addEventListener("click", function(ev){ if(ev.target === el("modal")) closeModal(); });
+
+  el("gear").addEventListener("click", function(){ el("settings").classList.remove("hidden"); });
+  el("settingsClose").addEventListener("click", function(){ el("settings").classList.add("hidden"); });
+  el("settings").addEventListener("click", function(ev){ if(ev.target === el("settings")) el("settings").classList.add("hidden"); });
 
   renderList();
   renderSummary();
