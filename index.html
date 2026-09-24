@@ -30,8 +30,12 @@
   .card h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 12px;}
   .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
   .card-head h2{margin:0;}
-  .gear{background:none; border:1px solid var(--line); color:var(--gold); border-radius:10px; width:44px; height:38px; font-size:1.15rem; line-height:1; cursor:pointer;}
+  .head-actions{display:flex; gap:8px;}
+  .gear{background:none; border:1px solid var(--line); color:var(--gold); border-radius:10px; width:44px; height:38px; font-size:1.15rem; font-weight:700; line-height:1; cursor:pointer;}
   .gear:active{background:rgba(201,162,39,.16);}
+  .help p{margin:0 0 10px; font-size:.9rem; color:var(--text);}
+  .help p:last-child{margin-bottom:0;}
+  .help b{color:var(--gold);}
   .hint{font-size:.78rem; color:var(--muted); margin:-4px 0 12px;}
 
   .field{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
@@ -122,7 +126,10 @@
   <div class="card">
     <div class="card-head">
       <h2>Персонаж</h2>
-      <button class="gear" id="gear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
+      <div class="head-actions">
+        <button class="gear" id="helpBtn" type="button" aria-label="Справка" title="Справка">?</button>
+        <button class="gear" id="gear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
+      </div>
     </div>
     <div class="field"><label>Имя</label><input type="text" id="name" placeholder="Безымянный"></div>
   </div>
@@ -149,6 +156,21 @@
     <p class="hint">Начните печатать название — появится подсказка с весом. Свой предмет можно вписать вручную.</p>
     <div id="list"></div>
     <button class="btn ghost" id="add">+ Добавить предмет</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="helpModal">
+  <div class="modal-box help">
+    <h3>Как пользоваться</h3>
+    <p><b>Персонаж.</b> Введите имя. Остальные параметры — по кнопке ⚙: Сила, множители грузоподъёмности и максимума, размер, «Мощное телосложение», единицы измерения.</p>
+    <p><b>Правила (D&amp;D 5e, базовые).</b> Без штрафов можно нести до <i>Сила × «Грузопод. ×»</i> (по умолчанию ×15). Свыше — перегруз со штрафами. Абсолютный максимум — <i>Сила × «Максимум ×»</i> (по умолчанию ×30). Множитель размера удваивается за каждую категорию выше Среднего, у Крошечного — вдвое меньше; «Мощное телосложение» считает как на размер больше.</p>
+    <p><b>Строка состояния</b> показывает переносимый вес, предел без штрафов, максимум и остаток. Цвет и метка на шкале — текущее состояние: Норма / Перегруз / Превышен предел.</p>
+    <p><b>Инвентарь.</b> Кнопка «+ Добавить предмет» создаёт строку. Начните печатать название — появятся подсказки из каталога, выбор подставляет вес автоматически. Свой предмет можно вписать вручную. Укажите вес и количество; кнопки «−/+» меняют количество, «Итого» — вес строки с учётом количества.</p>
+    <p><b>Наборы снаряжения.</b> При выборе набора из подсказок можно «Распаковать» — он заменится отдельными предметами с количествами, либо «Добавить набор целиком».</p>
+    <p><b>Ресурсы.</b> Кнопка «Закрепить» переносит карточку в блок «Ресурсы» под состоянием (при прокрутке он закрепляется сверху). Количество синхронизировано между карточкой и «Ресурсами»; «Открепить» возвращает предмет в инвентарь.</p>
+    <p><b>Единицы.</b> Веса каталога — в фунтах. Переключение на килограммы пересчитывает подсказки, поля и пороги (1 фнт ≈ 0,454 кг).</p>
+    <p><b>Сохранение.</b> Данные хранятся в браузере (localStorage) и не теряются при перезагрузке. Приложение работает офлайн.</p>
+    <button class="btn" id="helpClose" type="button">Понятно</button>
   </div>
 </div>
 
@@ -599,6 +621,10 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
   el("gear").addEventListener("click", function(){ el("settings").classList.remove("hidden"); });
   el("settingsClose").addEventListener("click", function(){ el("settings").classList.add("hidden"); });
   el("settings").addEventListener("click", function(ev){ if(ev.target === el("settings")) el("settings").classList.add("hidden"); });
+
+  el("helpBtn").addEventListener("click", function(){ el("helpModal").classList.remove("hidden"); });
+  el("helpClose").addEventListener("click", function(){ el("helpModal").classList.add("hidden"); });
+  el("helpModal").addEventListener("click", function(ev){ if(ev.target === el("helpModal")) el("helpModal").classList.add("hidden"); });
 
   renderList();
   renderSummary();
