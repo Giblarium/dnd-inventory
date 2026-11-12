@@ -34,8 +34,10 @@
   .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
   .card-head h2{margin:0;}
   .hidden{display:none;}
-  .head-actions{display:flex; gap:8px;}
-  .gear{background:none; border:1px solid var(--line); color:var(--gold); border-radius:10px; width:44px; height:38px; font-size:1.15rem; font-weight:700; line-height:1; cursor:pointer;}
+  .head-actions{display:flex; gap:6px;}
+  .gear{background:none; border:1px solid var(--line); color:var(--gold); border-radius:10px; width:40px; height:38px; font-size:1.1rem; font-weight:700; line-height:1; cursor:pointer;}
+  .share-link{width:100%; background:var(--panel2); border:1px solid var(--line); border-radius:10px; color:var(--text); padding:10px; font-size:.78rem; margin-bottom:10px; resize:none; word-break:break-all; font-family:inherit;}
+  .modal-box p.share-msg{min-height:1.2em; color:var(--gold); text-align:center; font-size:.85rem;}
   .gear:active{background:rgba(201,162,39,.16);}
   .help p{margin:0 0 10px; font-size:.9rem; color:var(--text);}
   .help p:last-child{margin-bottom:0;}
@@ -133,6 +135,7 @@
       <div class="head-actions">
         <button class="gear" id="helpBtn" type="button" aria-label="Справка" title="Справка">?</button>
         <button class="gear" id="installBtn" type="button" aria-label="Установить приложение" title="Установить приложение">⤓</button>
+        <button class="gear" id="shareBtn" type="button" aria-label="Поделиться персонажем" title="Поделиться персонажем">↗</button>
         <button class="gear" id="gear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
       </div>
     </div>
@@ -164,6 +167,20 @@
   </div>
 </div>
 
+<div class="modal hidden" id="shareModal">
+  <div class="modal-box">
+    <h3>Обмен персонажем</h3>
+    <p>Ссылка или файл содержат текущего персонажа и инвентарь. Откройте ссылку или загрузите файл на другом устройстве.</p>
+    <textarea id="shareLink" class="share-link" readonly rows="2"></textarea>
+    <button class="btn" id="shareCopy" type="button">Скопировать ссылку</button>
+    <button class="btn ghost" id="shareDownload" type="button">Скачать файл (JSON)</button>
+    <button class="btn ghost" id="shareImport" type="button">Загрузить файл</button>
+    <input type="file" id="shareFile" accept=".json,application/json" class="hidden">
+    <p id="shareMsg" class="share-msg"></p>
+    <button class="btn ghost" id="shareClose" type="button">Закрыть</button>
+  </div>
+</div>
+
 <div class="modal hidden" id="helpModal">
   <div class="modal-box help">
     <h3>Как пользоваться</h3>
@@ -174,6 +191,7 @@
     <p><b>Наборы снаряжения.</b> При выборе набора из подсказок можно «Распаковать» — он заменится отдельными предметами с количествами, либо «Добавить набор целиком».</p>
     <p><b>Ресурсы.</b> Кнопка «Закрепить» переносит карточку в блок «Ресурсы» под состоянием (при прокрутке он закрепляется сверху). Количество синхронизировано между карточкой и «Ресурсами»; «Открепить» возвращает предмет в инвентарь.</p>
     <p><b>Единицы.</b> Веса каталога — в фунтах. Переключение на килограммы пересчитывает подсказки, поля и пороги (1 фнт ≈ 0,454 кг).</p>
+    <p><b>Обмен.</b> Кнопка ↗ открывает окно обмена: «Скопировать ссылку» (персонаж кодируется в адресе), «Скачать файл» и «Загрузить файл» (JSON). Ссылка или файл переносят текущего персонажа и инвентарь на другое устройство.</p>
     <p><b>Сохранение.</b> Данные хранятся в браузере (localStorage) и не теряются при перезагрузке. Приложение работает офлайн.</p>
     <button class="btn" id="helpClose" type="button">Понятно</button>
   </div>
@@ -391,6 +409,124 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
     pinned.forEach(function(it){ box.appendChild(resourceCard(it)); });
   }
 
+  function b64encode(str){
+    return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+  function b64decode(s){
+    s = s.replace(/-/g,"+").replace(/_/g,"/");
+    while(s.length % 4) s += "=";
+    return decodeURIComponent(escape(atob(s)));
+  }
+
+  function exportObject(){
+    return {
+      app: "dnd-carry", v: 1,
+      state: {
+        name: state.name, str: state.str, capMult: state.capMult, maxMult: state.maxMult,
+        size: state.size, powerful: state.powerful, unit: state.unit, items: state.items
+      }
+    };
+  }
+
+  function buildShareLink(){
+    return location.origin + location.pathname + "#d=" + b64encode(JSON.stringify(exportObject()));
+  }
+
+  function normalizeImported(obj){
+    if(!obj || typeof obj !== "object") return null;
+    var src = (obj.state && typeof obj.state === "object") ? obj.state : obj;
+    if(!src || typeof src !== "object") return null;
+    var data = {
+      name: (typeof src.name === "string") ? src.name : "",
+      str: (src.str !== undefined && src.str !== null) ? src.str : 10,
+      capMult: (src.capMult !== undefined && src.capMult !== null) ? src.capMult : 15,
+      maxMult: (src.maxMult !== undefined && src.maxMult !== null) ? src.maxMult : 30,
+      size: (src.size !== undefined && src.size !== null) ? src.size : 1,
+      powerful: !!src.powerful,
+      unit: (src.unit === "кг") ? "кг" : "фнт",
+      items: []
+    };
+    if(Array.isArray(src.items)){
+      data.items = src.items.map(function(x){
+        x = x || {};
+        return {
+          id: x.id ? String(x.id) : uid(),
+          name: (typeof x.name === "string") ? x.name : "",
+          weight: (x.weight !== undefined && x.weight !== null && x.weight !== "") ? Number(x.weight) : null,
+          qty: (x.qty !== undefined && x.qty !== null && x.qty !== "") ? String(x.qty) : "1",
+          pinned: !!x.pinned
+        };
+      });
+    }
+    return data;
+  }
+
+  function applyStateData(data){
+    state = data;
+    save();
+    el("name").value = state.name;
+    el("str").value = state.str;
+    el("capMult").value = state.capMult;
+    el("maxMult").value = state.maxMult;
+    el("size").value = String(state.size);
+    el("powerful").checked = !!state.powerful;
+    el("unit").value = state.unit;
+    renderList();
+    renderSummary();
+  }
+
+  function shareMsg(t){ el("shareMsg").textContent = t; }
+
+  function copyShareLink(){
+    var link = buildShareLink();
+    el("shareLink").value = link;
+    var done = function(){
+      shareMsg(link.length > 1800 ? "Ссылка скопирована, но она длинная — надёжнее отправить файлом." : "Ссылка скопирована.");
+    };
+    var fallback = function(){
+      var ta = el("shareLink");
+      ta.focus(); ta.select();
+      try { document.execCommand("copy"); done(); }
+      catch(e){ shareMsg("Скопируйте ссылку вручную из поля выше."); }
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(done, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function downloadJSON(){
+    var json = JSON.stringify(exportObject(), null, 2);
+    var blob = new Blob([json], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var base = (state.name || "dnd").replace(/[^\w\u0400-\u04FF\- ]+/g, "").trim() || "dnd";
+    a.href = url; a.download = base + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    shareMsg("Файл скачан.");
+  }
+
+  function importFile(){
+    var f = el("shareFile").files && el("shareFile").files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try {
+        var data = normalizeImported(JSON.parse(String(reader.result)));
+        if(!data) throw new Error("bad");
+        applyStateData(data);
+        shareMsg("Импортировано: " + (data.name || "без имени") + ".");
+      } catch(e){
+        shareMsg("Не удалось прочитать файл.");
+      }
+      el("shareFile").value = "";
+    };
+    reader.onerror = function(){ shareMsg("Не удалось прочитать файл."); };
+    reader.readAsText(f);
+  }
+
   function renderSummary(){
     var T = totals();
     var st = statusOf(T.carried, T);
@@ -600,6 +736,16 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
 
   load();
 
+  (function(){
+    var m = /^#d=(.+)$/.exec(location.hash || "");
+    if(!m) return;
+    try {
+      var data = normalizeImported(JSON.parse(b64decode(m[1])));
+      if(data){ state = data; save(); }
+    } catch(e){}
+    if(history.replaceState){ history.replaceState(null, "", location.pathname + location.search); }
+  })();
+
   el("name").value = state.name;
   el("name").addEventListener("input", function(){ state.name = el("name").value; save(); });
   el("str").value = state.str;
@@ -630,6 +776,18 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
   el("helpBtn").addEventListener("click", function(){ el("helpModal").classList.remove("hidden"); });
   el("helpClose").addEventListener("click", function(){ el("helpModal").classList.add("hidden"); });
   el("helpModal").addEventListener("click", function(ev){ if(ev.target === el("helpModal")) el("helpModal").classList.add("hidden"); });
+
+  el("shareBtn").addEventListener("click", function(){
+    el("shareLink").value = buildShareLink();
+    shareMsg("");
+    el("shareModal").classList.remove("hidden");
+  });
+  el("shareClose").addEventListener("click", function(){ el("shareModal").classList.add("hidden"); });
+  el("shareModal").addEventListener("click", function(ev){ if(ev.target === el("shareModal")) el("shareModal").classList.add("hidden"); });
+  el("shareCopy").addEventListener("click", copyShareLink);
+  el("shareDownload").addEventListener("click", downloadJSON);
+  el("shareImport").addEventListener("click", function(){ el("shareFile").click(); });
+  el("shareFile").addEventListener("change", importFile);
 
   renderList();
   renderSummary();
