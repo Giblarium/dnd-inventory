@@ -150,6 +150,24 @@
       </div>
       <span class="gold-suffix">зм</span>
     </div>
+    <div class="field">
+      <label>Серебро</label>
+      <div class="qty-ctrl">
+        <button type="button" class="qbtn" id="silverMinus" aria-label="Меньше">−</button>
+        <input type="number" id="silver" class="mini" min="0" step="1" inputmode="numeric" value="0">
+        <button type="button" class="qbtn" id="silverPlus" aria-label="Больше">+</button>
+      </div>
+      <span class="gold-suffix">см</span>
+    </div>
+    <div class="field">
+      <label>Медь</label>
+      <div class="qty-ctrl">
+        <button type="button" class="qbtn" id="copperMinus" aria-label="Меньше">−</button>
+        <input type="number" id="copper" class="mini" min="0" step="1" inputmode="numeric" value="0">
+        <button type="button" class="qbtn" id="copperPlus" aria-label="Больше">+</button>
+      </div>
+      <span class="gold-suffix">мм</span>
+    </div>
   </div>
 
   <div class="card summary">
@@ -253,7 +271,7 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
 
   var KEY = "dnd5e_carry_v1";
   var LB_TO_KG = 0.45359237;
-  var state = { name:"", str:10, capMult:15, maxMult:30, size:1, powerful:false, unit:"фнт", gold:0, items:[] };
+  var state = { name:"", str:10, capMult:15, maxMult:30, size:1, powerful:false, unit:"фнт", gold:0, silver:0, copper:0, items:[] };
 
   function uid(){ return Math.random().toString(36).slice(2,9); }
 
@@ -433,7 +451,8 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
       app: "dnd-carry", v: 1,
       state: {
         name: state.name, str: state.str, capMult: state.capMult, maxMult: state.maxMult,
-        size: state.size, powerful: state.powerful, unit: state.unit, gold: state.gold, items: state.items
+        size: state.size, powerful: state.powerful, unit: state.unit,
+        gold: state.gold, silver: state.silver, copper: state.copper, items: state.items
       }
     };
   }
@@ -455,6 +474,8 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
       powerful: !!src.powerful,
       unit: (src.unit === "кг") ? "кг" : "фнт",
       gold: (src.gold !== undefined && src.gold !== null && src.gold !== "") ? Number(src.gold) : 0,
+      silver: (src.silver !== undefined && src.silver !== null && src.silver !== "") ? Number(src.silver) : 0,
+      copper: (src.copper !== undefined && src.copper !== null && src.copper !== "") ? Number(src.copper) : 0,
       items: []
     };
     if(Array.isArray(src.items)){
@@ -483,6 +504,8 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
     el("powerful").checked = !!state.powerful;
     el("unit").value = state.unit;
     el("gold").value = state.gold;
+    el("silver").value = state.silver;
+    el("copper").value = state.copper;
     renderList();
     renderSummary();
   }
@@ -773,18 +796,21 @@ var EQUIPMENT = [{n:"Боевой посох",c:"Простое Рукопашн
   el("unit").value = state.unit;
   el("unit").addEventListener("change", function(){ state.unit = el("unit").value; save(); renderList(); renderSummary(); });
 
-  el("gold").value = state.gold;
-  el("gold").addEventListener("input", function(){
-    var n = Number(el("gold").value);
-    state.gold = isNaN(n) ? 0 : Math.max(0, n);
-    save();
+  ["gold","silver","copper"].forEach(function(k){
+    var inp = el(k);
+    inp.value = state[k];
+    inp.addEventListener("input", function(){
+      var n = Number(inp.value);
+      state[k] = isNaN(n) ? 0 : Math.max(0, n);
+      save();
+    });
+    function setVal(v){
+      v = Math.max(0, Math.round(v));
+      state[k] = v; save(); inp.value = String(v);
+    }
+    el(k + "Minus").addEventListener("click", function(){ setVal((Number(state[k]) || 0) - 1); });
+    el(k + "Plus").addEventListener("click", function(){ setVal((Number(state[k]) || 0) + 1); });
   });
-  function setGold(v){
-    v = Math.max(0, Math.round(v));
-    state.gold = v; save(); el("gold").value = String(v);
-  }
-  el("goldMinus").addEventListener("click", function(){ setGold((Number(state.gold) || 0) - 1); });
-  el("goldPlus").addEventListener("click", function(){ setGold((Number(state.gold) || 0) + 1); });
 
   el("add").addEventListener("click", addItem);
   el("addTop").addEventListener("click", addItem);
